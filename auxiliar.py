@@ -1,37 +1,3 @@
-# # -------------------------------------------- #
-# data_by_labels = {}
-# ith_label = -1
-# while ith_label < len(np.unique(y) - 1):
-#     ith_label = ith_label + 1
-#     label = np.unique(y)[ith_label]
-#     # label = 2
-#     idx_label = y == label
-#     X_label = X[idx_label]
-#     y_label = y[idx_label]
-#
-#     X_other_labels = X[~idx_label]
-#     y_other_labels = y[~idx_label]
-#
-#     data_by_labels[label] = {}
-#     data_by_labels[label]['label'] = label
-#     data_by_labels[label]['X'] = X_label
-#     data_by_labels[label]['y'] = y_label
-#     del y_label, X_label, label
-#
-# # ----------------------------- #
-# # -- Get shortest distances
-# # ----------------------------- #
-# ith_label = -1
-# while ith_label < len(data_by_labels):
-#     ith_label = ith_label + 1
-#     str_label = list(data_by_labels.keys())[ith_label]
-#
-#     fetures = data_by_labels[str_label]['']
-#     fetures.keys()
-#
-#     ith_label
-# data_by_labels
-# data_by_labels
 
 
 import os
@@ -43,9 +9,11 @@ sys.path.append('/Volumes/hd_Data/Users/leo/Documents/Estudos/UTFPR/Orientacao/m
 from ostools import metrics as osm
 from ostools.metrics import os_precision
 from ostools.metrics import *
+from ostools.metrics import os_precision, os_recall, os_true_negative_rate, os_youdens_index
+
 osm.os_precision
 os_precision
-get_os_conf_mat_terms
+dir(osm)
 
 
 import pandas as pd
@@ -248,3 +216,16 @@ t0 = datetime.now()
 stats.exponweib.fit(obs_distances, floc=0, f0=1, loc = 1, scale = 1)
 tfit2 = datetime.now()
 (tfit2-t0).total_seconds()
+
+
+
+y_true = test_da['group']
+y_pred = test_da['predictions']
+
+os_accuracy(y_true, y_pred)
+
+
+y_true = train_da['group']
+y_pred = train_da['predictions']
+
+os_accuracy(y_true, y_pred)

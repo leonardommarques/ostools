@@ -3,7 +3,6 @@
 # -------------------------------------- #
 
 import numpy as np
-from sklearn.metrics import precision_score
 from sklearn.metrics import confusion_matrix
 
 def get_os_conf_mat_terms(

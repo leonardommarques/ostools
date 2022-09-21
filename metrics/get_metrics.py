@@ -3,8 +3,6 @@
 # -------------------------------------- #
 
 import numpy as np
-from sklearn.metrics import precision_score
-from sklearn.metrics import confusion_matrix
 from .get_os_conf_mat_terms import get_os_conf_mat_terms
 
 def get_metrics(
@@ -12,7 +10,7 @@ def get_metrics(
     , y_pred
     , unknown_label = -1
     , labels=None
-    , average = 'micro'
+    , average = 'macro'
     , metric = 'precision'):
     """
     Get true negative rate, precision or recall with macro or micro averaging.
@@ -70,17 +68,21 @@ def get_metrics(
     return metric
 
 
-# ------------------------------------- #
-# -- individual metrics
-# ------------------------------------- #
+# -------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------- #
+# -- individual metrics -- #
+# -------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------- #
 
-
+# ---------------------------- #
+# -- OS precision
+# ---------------------------- #
 def os_precision(
     y_true
     , y_pred
     , unknown_label = -1
     , labels=None
-    , average = 'micro'
+    , average = 'macro'
 ):
 
     results = get_metrics(
@@ -91,12 +93,15 @@ def os_precision(
             , average=average
             , metric='precision')
 
+# ---------------------------- #
+# os recall
+# ---------------------------- #
 def os_recall(
     y_true
     , y_pred
     , unknown_label = -1
     , labels=None
-    , average = 'micro'
+    , average = 'macro'
 ):
 
     results = get_metrics(
@@ -107,13 +112,15 @@ def os_recall(
             , average=average
             , metric='recall')
 
-
+# ---------------------------- #
+# -- OS TNR
+# ---------------------------- #
 def os_true_negative_rate(
     y_true
     , y_pred
     , unknown_label = -1
     , labels=None
-    , average = 'micro'
+    , average = 'macro'
 ):
 
     results = get_metrics(
@@ -125,13 +132,15 @@ def os_true_negative_rate(
             , metric='os_true_negative_rate')
 
 
-
+# ---------------------------- #
+# Youden's index
+# ---------------------------- #
 def os_youdens_index(
     y_true
     , y_pred
     , unknown_label = -1
     , labels=None
-    , average = 'micro'
+    , average = 'macro'
 ):
 
     tnr = get_metrics(
@@ -153,6 +162,62 @@ def os_youdens_index(
     youdens = recall + tnr -1
     return youdens
 
+# ---------------------------- #
+# --
+# ---------------------------- #
+
+def os_accuracy(
+        y_true
+        , y_pred
+        , unknown_label = -1
+        , alpha = 0.5
+):
+    """
+    Normalized accuracy
+    Sources:
+    Nearest neighbors distance ratio open-set classifier. Pedro R. Mendes Júnior 2015
+    https://arxiv.org/pdf/1811.08581.pdf (pag 11/19)
+
+    :param y_true: Observed Values
+    :param y_pred: predictions
+    :param unknown_label: label representing unknown class
+    :param alpha: Regularization parameter. Weight for known Accuracy (unknown Accuracy weight = 1-lambda)
+    :return:
+    """
+    # y_true, y_pred
+
+    # ---------------------------------- #
+    # -- AKS accuracy for the knowns -- #
+    # ---------------------------------- #
+    idx_knowns = y_true != unknown_label
+    y_true_known = y_true[idx_knowns]
+    y_pred_known = y_pred[idx_knowns]
+
+    y_true_unknown = y_true[~idx_knowns]
+    y_pred_unknown = y_pred[~idx_knowns]
+
+    AKS = sum(y_true_known==y_pred_known) / len(y_true_known)
+
+
+    # ---------------------------------- #
+    # -- accuracy for the unknown -- #
+    # ---------------------------------- #
+    if len(y_true_unknown) == 0:
+        AUS = None
+    else:
+        AUS = sum(y_true_unknown == y_pred_unknown) / len(y_pred_unknown)
+
+    # ------------------------ #
+    # -- normalized accuracy
+    # when there are no unknowns, do not consider AUS
+    # ------------------------ #
+    if len(y_true_unknown) == 0:
+        norm_acc = AKS
+    else:
+        norm_acc = alpha*AKS + (1-alpha)*AUS
+
+
+    return norm_acc
 
 # ------------------------------------------------------------ #
 # ------------------------------------------------------------ #
