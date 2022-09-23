@@ -1,19 +1,14 @@
-
+pd.set_option('display.max_rows', 10)
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
 
 import os
-os.path
 import sys
-# sys.path.append('/Volumes/hd_Data/Users/leo/Documents/Estudos/UTFPR/Orientacao/my_packages/ostools/metrics/__init__.py')
-# sys.path.append('/Volumes/hd_Data/Users/leo/Documents/Estudos/UTFPR/Orientacao/my_packages/ostools/')
 sys.path.append('/Volumes/hd_Data/Users/leo/Documents/Estudos/UTFPR/Orientacao/my_packages/')
 from ostools import metrics as osm
-from ostools.metrics import os_precision
-from ostools.metrics import *
-from ostools.metrics import os_precision, os_recall, os_true_negative_rate, os_youdens_index
-
-osm.os_precision
-os_precision
-dir(osm)
+from ostools.metrics import os_precision, os_recall, os_true_negative_rate, os_youdens_index, os_accuracy
+from ostools.models import EVM
+from sklearn.metrics import confusion_matrix
 
 
 import pandas as pd
@@ -86,11 +81,14 @@ get_metrics(
 ################################################################################
 ################################################################################
 ################################################################################
+import numpy as np
 import pandas as pd
-# sample_train = pd.read_csv('/Users/leonardomarques/Downloads/sample_train.csv')
-# sample_train = pd.read_csv('/Users/leonardomarques/Downloads/sample_train.csv')
-# X = sample_train[['x1', 'x2']].values
-# y = sample_train['group'].values
+import os
+import sys
+sys.path.append('/Volumes/hd_Data/Users/leo/Documents/Estudos/UTFPR/Orientacao/my_packages/')
+from ostools import metrics as osm
+from ostools.metrics import os_precision, os_recall, os_true_negative_rate, os_youdens_index, os_accuracy
+from ostools.models import EVM
 
 
 train_da = pd.read_csv('/Users/leonardomarques/Downloads/train_da.csv')
@@ -113,6 +111,7 @@ evm = EVM(
     , n_obs_to_fuse=4
     , confidence_threshold=0.9
 )
+
 from datetime import datetime
 t0 = datetime.now()
 evm.fit(
@@ -128,104 +127,44 @@ evm.weibulls_dict[1][0]
 
 probas_ = evm.predict_proba(X_train)
 predicted_labels = evm.predict(X_train)
-predicted_labels = predicted_labels.reshape(-1, 1)
 train_da['prediction'] = predicted_labels
+# confusion_matrix(train_da['group'], train_da['prediction'], labels = np.sort(train_da['group'].unique()))
 
-from sklearn.metrics import confusion_matrix
-confusion_matrix(train_da['group'], train_da['prediction'], labels = np.sort(train_da['group'].unique()))
-train_da['group'].value_counts()
 
-sum(train_da['group'].value_counts())
-332513078856332513078856332513078856
-
-probas_ = evm.predict_proba(X_val)
 predicted_labels = evm.predict(X_val)
 predicted_labels = predicted_labels.reshape(-1, 1)
 val_da['prediction'] = predicted_labels
-confusion_matrix(val_da['group'], val_da['prediction'], labels = np.sort(val_da['group'].unique()))
+# confusion_matrix(val_da['group'], val_da['prediction'], labels = np.sort(val_da['group'].unique()))
 
-
-probas_ = evm.predict_proba(X_test)
 predicted_labels = evm.predict(X_test)
-predicted_labels = predicted_labels.reshape(-1, 1)
 test_da['prediction'] = predicted_labels
+# confusion_matrix(test_da['group'], test_da['prediction'], labels = np.sort(test_da['group'].unique()))
 
 
+test_da['predictions'].value_counts()
+val_da['predictions'].value_counts()
+test_da['predictions'].value_counts()
+# --------------------------------- #
+# -- metrics
+# --------------------------------- #
+from ostools.metrics  import os_recall, os_precision
 
-test_da['prediction'].unique()
-test_da['prediction'].value_counts()
+[os_accuracy(a['group'], a['predictions']) for a in [train_da, val_da, test_da]]
+[os_recall(a['group'], a['predictions']) for a in [train_da, val_da, test_da]]
+[os_precision(a['group'], a['predictions']) for a in [train_da, val_da, test_da]]
 
-train_da['prediction'].value_counts()
-val_da['prediction'].value_counts()
-
-self = evm
-return_dict = True
-from datetime import datetime
-
-t0 = datetime.now()
-probas_ = evm.predict_proba(X_train)
-t_pred = datetime.now()
-
-tempos_pred = [t0, t_pred]
-
-t0 = datetime.now()
-probas_ = evm.predict(X_train)
-t_pred2 = datetime.now()
-tempos_pred2 = [t0, t_pred2]
-
-# -------------------------------------------------- #
-# -------------------------------------------------- #
-# debug fit
-# -------------------------------------------------- #
-# -------------------------------------------------- #
-X = X_train
-y = y_train
-self = evm
-# evm.fit(
-#     X_train
-#     , y_train
-# )
-len(self.weibulls_dict)
-self.weibulls_dict[1]
-
-weibulls_dict[1]
-
-self.weibulls_dict[1]
-sum([len(i) for i in self.weibulls_dict.values()])
-self.weibulls_dict.keys()
-tempos = [
-    t0
-    , t_filtros
-    , t_tail
-    , t_fit
-]
-datetime.
-
-(tempos[1]-tempos[0]).total_seconds()
-(tempos[2]-tempos[1]).total_seconds()
-(tempos[3]-tempos[2]).total_seconds()
-
-
-t0 = datetime.now()
-stats.exponweib.fit(obs_distances, floc=0, f0=1)
-tfit2 = datetime.now()
-(tfit2-t0).total_seconds()
-np.array([obs_distances, obs_distances, obs_distances])
-
-t0 = datetime.now()
-stats.exponweib.fit(obs_distances, floc=0, f0=1, loc = 1, scale = 1)
-tfit2 = datetime.now()
-(tfit2-t0).total_seconds()
-
-
-
-y_true = test_da['group']
-y_pred = test_da['predictions']
-
-os_accuracy(y_true, y_pred)
-
-
+os_recall(train_da['group'], train_da['predictions'])
 y_true = train_da['group']
 y_pred = train_da['predictions']
+metric = 'recall'
 
-os_accuracy(y_true, y_pred)
+
+
+[os_accuracy(a['group'], a['predictions']) for a in [train_da, val_da, test_da]]
+[get_metrics(y_true = a['group'], y_pred = a['predictions'], unknown_label = -1, labels=None, average = 'macro', metric = 'recall')  for a in [train_da, val_da, test_da]]
+[get_metrics(y_true = a['group'], y_pred = a['predictions'], unknown_label = -1, labels=None, average = 'macro', metric = 'precision')  for a in [train_da, val_da, test_da]]
+
+[os_recall(a['group'], a['predictions']) for a in [train_da, val_da, test_da]]
+
+
+os_accuracy(test_da['group'], test_da['predictions'])

@@ -37,8 +37,6 @@ def get_metrics(
 
     tps, fns, fps, tns = conf_mat_terms
 
-    metric
-
 
     # -- set formula parameters.
     # precision, recall and youdens are on the form of sum(A)/(sum(A) + sum(B)).

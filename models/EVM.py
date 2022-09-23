@@ -283,6 +283,7 @@ class EVM(BaseEstimator, ClassifierMixin):
             )
 
             predictions.append(pred_)
+            del pred_
 
         if not return_dict:
             # -- transform to array -- #
@@ -315,7 +316,7 @@ class EVM(BaseEstimator, ClassifierMixin):
         # ------------------------------- #
 
         proba_most_likely_label = np.apply_along_axis(lambda xx: np.max(xx), 1, predictions)
-        predicted_label_idx = np.apply_along_axis(lambda xx: np.where(xx == np.max(xx))[0], 1, predictions)
+        predicted_label_idx = np.apply_along_axis(lambda xx: np.where(xx == np.max(xx))[0][0], 1, predictions)
         predicted_label_ = np.apply_along_axis(lambda xx: labels[xx], 0, predicted_label_idx)
 
         # -- check if prediction of for unknown class (predicted value < confidence_threshold
@@ -326,7 +327,4 @@ class EVM(BaseEstimator, ClassifierMixin):
         # -- result
         # ----------------------------- #
         return predicted_label_
-
-
-
 
