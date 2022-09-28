@@ -91,6 +91,8 @@ def os_precision(
             , average=average
             , metric='precision')
 
+    return results
+
 # ---------------------------- #
 # os recall
 # ---------------------------- #
@@ -109,6 +111,7 @@ def os_recall(
             , labels=labels
             , average=average
             , metric='recall')
+    return results
 
 # ---------------------------- #
 # -- OS TNR

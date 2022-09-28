@@ -104,9 +104,7 @@ def predict_from_weibulls_dict_(
     :param return_dict: if True, returns a dictionary. If false, return a list.
     :return:
     """
-    # X = X_pred
-    # X = X_pred[0, ]
-    # X = X_pred[4:5, ]
+
     assert X.shape[0] == 1, 'X is not an array fo shape (1, nnumber of features)'
 
     # ---------------------------------------- #
@@ -242,6 +240,56 @@ class EVM(BaseEstimator, ClassifierMixin):
         self.weibulls_dict = weibulls_dict
 
 
+    # # def predict_proba(
+    #         self
+    #         , X
+    #         , return_dict = True
+    #         , n_obs_to_fuse = None
+    # ):
+    #     """
+    #     Predictions using the weibulls
+    #     :param X: "test" observations to predict to.
+    #     :param return_dict: if True, returns a dictionary. If false, return a list.
+    #     :param n_obs_to_fuse: number of observations to use in the prediction by averaging out their individual predictions
+    #     :param confidence_threshold: Minimum probability of belonging to the acceptance area of the observation
+    #     :return:
+    #     """
+    #
+    #     # -- get hyper parameters -- #
+    #     weibulls_dict = self.weibulls_dict
+    #
+    #     if n_obs_to_fuse is None:
+    #         n_obs_to_fuse = self.n_obs_to_fuse
+    #
+    #     # --------------------------- #
+    #     # -- make predicitons
+    #     # for each test observation
+    #     # --------------------------- #
+    #
+    #     predictions = []
+    #     i_obs = -1
+    #     while i_obs < X.shape[0]-1:
+    #         i_obs = i_obs + 1
+    #         X_aux = X[i_obs, ]
+    #         X_aux = X_aux.reshape(1, -1)
+    #
+    #         pred_ = predict_from_weibulls_dict_(
+    #             X_aux
+    #             , weibulls_dict=weibulls_dict
+    #             , return_dict = return_dict
+    #             , n_obs_to_fuse = n_obs_to_fuse
+    #         )
+    #
+    #         predictions.append(pred_)
+    #         del pred_
+    #
+    #     if not return_dict:
+    #         # -- transform to array -- #
+    #         # predictions_array = [list(i.values()) for i in predictions]
+    #         predictions = np.array(predictions)
+    #
+    #
+    #     return predictions
     def predict_proba(
             self
             , X
@@ -268,28 +316,96 @@ class EVM(BaseEstimator, ClassifierMixin):
         # for each test observation
         # --------------------------- #
 
-        predictions = []
-        i_obs = -1
-        while i_obs < X.shape[0]-1:
-            i_obs = i_obs + 1
-            X_aux = X[i_obs, ]
-            X_aux = X_aux.reshape(1, -1)
+        labels = list(weibulls_dict.keys())
+        weibull_dfs = []
+        for class_key, class_value in weibulls_dict.items():
+            # print(class_key)
+            class_weibulls = weibulls_dict[class_key]
+            for class_weibull in class_weibulls:
+                # class_weibull = class_weibulls[1]
+                class_weibull_to_df = class_weibull.copy()
+                class_weibull_to_df['weibull_pars']['params'] = str(class_weibull_to_df['weibull_pars']['params'])
+                class_weibull_to_df['weibull_pars'] = {key_: [value_] for key_, value_ in
+                                                 class_weibull_to_df['weibull_pars'].items()}
+                class_weibull_to_df['weibull_pars'] = pd.DataFrame(class_weibull_to_df['weibull_pars'])
+                class_weibull_to_df['label'] = pd.DataFrame({'label': [class_weibull_to_df['label']]})
 
-            pred_ = predict_from_weibulls_dict_(
-                X_aux
-                , weibulls_dict=weibulls_dict
-                , return_dict = return_dict
-                , n_obs_to_fuse = n_obs_to_fuse
-            )
+                class_weibull_to_df['observation'] = class_weibull_to_df['observation'].reshape(1,
+                                                                                    -class_weibull_to_df['observation'].shape[
+                                                                                        0])
+                class_weibull_to_df['observation'] = pd.DataFrame(class_weibull_to_df['observation'])
+                class_weibull_to_df['observation'].columns = [f"x{i}" for i in class_weibull_to_df['observation'].columns]
 
-            predictions.append(pred_)
-            del pred_
+
+                final_df = pd.concat(list(class_weibull_to_df.values()), axis=1)
+                old_names = final_df.columns
+                first_names = ['shape', 'scale', 'params', 'label']
+                last_names = [i for i in final_df.columns if i not in first_names]
+                new_names = first_names + last_names
+                final_df = final_df[new_names]
+                weibull_dfs.append(final_df)
+
+        weibulls_df = pd.concat(weibull_dfs)
+
+        # ------------------- #
+        # -- add distances -- #
+        # ------------------- #
+        distances_ = distance_matrix(weibulls_df[last_names], X)
+        distances_ = pd.DataFrame(distances_)
+        distances_.columns = [f"dist_{i}" for i in distances_.columns]
+
+        weibulls_df = weibulls_df.reset_index(drop = True)
+        weibulls_df = pd.concat([weibulls_df, distances_], axis=1)
+
+        label_idx = np.where(weibulls_df.columns == 'label')[0][0]
+        dist_idx = np.where(weibulls_df.columns == 'dist_0')[0][0]
+
+        # ---------------------------- #
+        # -- Get weibull probabilities
+        # ---------------------------- #
+
+        dists_df = weibulls_df.iloc[:, dist_idx:].copy()
+        probas_df = dists_df * 0
+        probas_df.columns = [f'proba_{col_}' for col_ in range(len(probas_df.columns))]
+
+        i_weibull = -1
+        while i_weibull < dists_df.shape[0] - 1:
+            i_weibull = i_weibull + 1
+
+            weibull_pars_ = weibulls_df.iloc[i_weibull,]['params']
+            weibull_pars_ = eval(weibull_pars_)
+
+            dist_ = dists_df.iloc[i_weibull, :]
+            proba_ = predict_weibul(x=dist_
+                                    , weibull_pars=weibull_pars_
+                                    )
+
+            probas_df.iloc[i_weibull, :] = proba_
+
+        # ------------------------------------------------------- #
+        # -- get mean of the top `n_obs_to_fuse` probabilities -- #
+        # ------------------------------------------------------- #
+        predictions = {}
+        for label in labels:
+            # label = labels[0]
+            weibulls_df['label']
+            aux_df = probas_df[weibulls_df['label'] == label]
+
+            top_probs = []
+            for observation in range(aux_df.shape[1]):
+                # observation = 0
+                probas = aux_df.iloc[:, observation]
+                probas = probas.sort_values(ascending=False)
+                probas = probas[:n_obs_to_fuse]
+                probas = np.mean(probas)
+                top_probs.append(probas)
+
+            predictions[label] = top_probs
 
         if not return_dict:
             # -- transform to array -- #
-            # predictions_array = [list(i.values()) for i in predictions]
-            predictions = np.array(predictions)
-
+            prediction_df = pd.DataFrame(predictions)
+            predictions = prediction_df.values
 
         return predictions
 
@@ -299,16 +415,18 @@ class EVM(BaseEstimator, ClassifierMixin):
             , n_obs_to_fuse = None
             , confidence_threshold = None):
 
-        labels = self.labels
+        labels = np.array(self.labels)
         if confidence_threshold is None:
             confidence_threshold = self.confidence_threshold
+        if n_obs_to_fuse is None:
+            n_obs_to_fuse = self.n_obs_to_fuse
 
         # ------------------------------- #
         # -- get probability predictions -- #
         # ------------------------------- #
         predictions = self.predict_proba(X
             , return_dict=False
-            , n_obs_to_fuse=None
+            , n_obs_to_fuse=n_obs_to_fuse
             )
 
         # ------------------------------- #
