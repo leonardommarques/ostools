@@ -69,6 +69,10 @@ del da1, da2
 train_da, test_da = train_test_split(known_da, test_size=0.2, random_state=876357463)
 train_da, val_da = train_test_split(known_da, test_size=0.2, random_state=876357463)
 
+train_da['split'] = 'train'
+val_da['split'] = 'val'
+test_da['split'] = 'test'
+
 X_train = train_da[['x1', 'x2']].values
 X_val = val_da[['x1', 'x2']].values
 
@@ -125,7 +129,8 @@ model.compile(
     , metrics=['accuracy']
 )
 
-model.fit(X_train, Y_train, epochs=20)
+# model.fit(X_train, Y_train, epochs=20)
+model.fit(X_train, Y_train, epochs=10)
 model.evaluate(X_train, Y_train)
 model.evaluate(X_val, Y_val)
 # model.evaluate(X_test, Y_test)
@@ -136,6 +141,13 @@ model.evaluate(X_val, Y_val)
 X_batch = X_train[:5].copy()
 
 def get_activations(original_model, X_batch, layer = -2):
+    """
+    Get the values for the desired layer in the network.
+    :param original_model:
+    :param X_batch: Input values
+    :param layer: The index of the desired layer
+    :return: activations o the desired layer.
+    """
     from keras.models import Model
 
     intermediate_layer_model = Model(
@@ -147,22 +159,46 @@ def get_activations(original_model, X_batch, layer = -2):
     return activations
 
 
-
+# activation vectors
 av = get_activations(model, X_batch=X_batch)
+# softmax on the activation vetors
 np.apply_along_axis(lambda x: [np.exp(i)/sum(np.exp(x)) for i in x], 1, av)
+# nn predictions (equal to softmax o the activation vector)
 model.predict(X_batch)
 
 # ------------------------------------------- #
 # -- Predictions and Activation Vectors
 # ------------------------------------------- #
+total_da = pd.concat([
+    train_da.reset_index(drop = True)
+    , val_da.reset_index(drop =True)
+    , test_da.reset_index(drop= True)]
+    , axis = 0, ignore_index=True)
 
 preds = model.predict(total_da[['x1', 'x2']].values)
+total_preds = pd.DataFrame(preds)
+total_preds.columns = [f"pred_{i}" for i in range(len(total_preds.columns))]
+
 avs = get_activations(model, X_batch=total_da[['x1', 'x2']].values)
+avs_df = pd.DataFrame(avs)
+avs_df.columns =  [f"activation_vector_{i}" for i in range(len(avs_df.columns))]
+
+total_da_2 = pd.concat([total_da.copy().reset_index(drop=  True), avs_df.reset_index(drop=  True)], axis = 1)
+total_da_2 = pd.concat([total_da_2, total_preds], axis = 1)
+total_da_2.head(3)
+
+total_da_2.to_csv("/Users/leonardomarques/Downloads/total_da_2.csv", index = False)
+
+total_da_2
+avs.shape[1]
+type(avs)
+total_da
 for i in range(preds.shape[1]-1):
     # - predicitons
     total_da['proba_' + str(i)] = preds[:, i]
     # -- AVs
     total_da['av_' + str(i)] = avs[:, i]
+
 
 
 
