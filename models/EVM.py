@@ -70,7 +70,7 @@ def fit_weibull(
 def predict_weibul(
         x
         , weibull_pars
-        , lower_tail = True
+        , lower_tail = False
 ):
     """
     Make weibull predictions with given parameters
@@ -85,7 +85,7 @@ def predict_weibul(
 
     result = stats.exponweib.cdf(x, exp1, k1, loc1, lam1)
 
-    if lower_tail:
+    if not lower_tail:
         result = 1-result
 
     return result
