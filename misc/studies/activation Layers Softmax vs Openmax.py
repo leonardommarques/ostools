@@ -25,6 +25,7 @@ import tensorflow as tf
 
 from sklearn.model_selection import train_test_split
 
+
 # ------------------------------------------------------------ #
 # -- data
 # ------------------------------------------------------------ #
@@ -193,7 +194,7 @@ total_da_2
 avs.shape[1]
 type(avs)
 total_da
-for i in range(preds.shape[1]-1):
+for i in range(preds.shape[1]):
     # - predicitons
     total_da['proba_' + str(i)] = preds[:, i]
     # -- AVs
@@ -217,3 +218,5 @@ for i in range(preds.shape[1]-1):
         ) +
         gg.geom_point(size = 4)
 )
+
+

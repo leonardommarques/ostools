@@ -50,20 +50,20 @@ def get_metrics(
         B = fns
     elif metric == 'true_negative_rate':
         A = tns
-        B = fps
+        B = fps #[tns[i_]+fps[i_] for i_ in range(len(tns))]
 
     # -------------------------------------- #
     # get metric average
     # -------------------------------------- #
     if average == 'micro':
-        metric = sum(A)/(sum(A) + sum(B))
+        metric_value = sum(A)/(sum(A) + sum(B))
     elif average == 'macro':
         rates = [a/(a+b) for a, b in zip(A, B)]
         # rates = [(a, b) for a, b in zip(A, B)]
 
-        metric = np.mean(rates)
+        metric_value = np.mean(rates)
 
-    return metric
+    return metric_value
 
 
 # -------------------------------------------------------------------------- #
@@ -130,7 +130,9 @@ def os_true_negative_rate(
             , unknown_label=unknown_label
             , labels=labels
             , average=average
-            , metric='os_true_negative_rate')
+            , metric='true_negative_rate')
+
+    return results
 
 
 # ---------------------------- #

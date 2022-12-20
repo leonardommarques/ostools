@@ -155,7 +155,7 @@ def predict_from_weibulls_dict_(
 
 
 class EVM(BaseEstimator, ClassifierMixin):
-    """Fits a logistic regression model on tree embeddings.
+    """Fits EVM
     """
     def __init__(self
                  , margin_scale=1
@@ -293,7 +293,7 @@ class EVM(BaseEstimator, ClassifierMixin):
     def predict_proba(
             self
             , X
-            , return_dict = True
+            , return_df = True
             , n_obs_to_fuse = None
     ):
         """
@@ -388,7 +388,6 @@ class EVM(BaseEstimator, ClassifierMixin):
         predictions = {}
         for label in labels:
             # label = labels[0]
-            weibulls_df['label']
             aux_df = probas_df[weibulls_df['label'] == label]
 
             top_probs = []
@@ -402,10 +401,11 @@ class EVM(BaseEstimator, ClassifierMixin):
 
             predictions[label] = top_probs
 
-        if not return_dict:
+        if return_df:
             # -- transform to array -- #
             prediction_df = pd.DataFrame(predictions)
-            predictions = prediction_df.values
+            predictions = prediction_df
+            # predictions = predictions.values
 
         return predictions
 
@@ -413,7 +413,9 @@ class EVM(BaseEstimator, ClassifierMixin):
             self
             , X
             , n_obs_to_fuse = None
-            , confidence_threshold = None):
+            , confidence_threshold = None
+            , return_df = True
+    ):
 
         labels = np.array(self.labels)
         if confidence_threshold is None:
@@ -425,7 +427,7 @@ class EVM(BaseEstimator, ClassifierMixin):
         # -- get probability predictions -- #
         # ------------------------------- #
         predictions = self.predict_proba(X
-            , return_dict=False
+            , return_df=True
             , n_obs_to_fuse=n_obs_to_fuse
             )
 
@@ -440,6 +442,9 @@ class EVM(BaseEstimator, ClassifierMixin):
         # -- check if prediction of for unknown class (predicted value < confidence_threshold
         predicted_label_[proba_most_likely_label < confidence_threshold] = -1
         predicted_label_ = predicted_label_.reshape(-1, 1)
+
+        if return_df:
+            predicted_label_ = pd.DataFrame(predicted_label_)
 
         # ----------------------------- #
         # -- result
