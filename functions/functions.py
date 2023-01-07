@@ -108,6 +108,7 @@ def compute_alpha_weights(activation_vector):
     for i in range(len(alpha_weights)):
         ranked_alpha[activation_ranks[i]] = alpha_weights[i]
 
+    ranked_alpha = ranked_alpha.reshape([1, -1])
     return ranked_alpha
 
 

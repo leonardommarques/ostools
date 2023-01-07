@@ -3,6 +3,8 @@
 # -------------------------------------- #
 
 import numpy as np
+import pandas as pd
+
 from .get_os_conf_mat_terms import get_os_conf_mat_terms
 
 def get_metrics(
@@ -59,7 +61,7 @@ def get_metrics(
         metric_value = sum(A)/(sum(A) + sum(B))
     elif average == 'macro':
         rates = [a/(a+b) for a, b in zip(A, B)]
-        # rates = [(a, b) for a, b in zip(A, B)]
+        rates = [xx for xx in rates if not np.isnan(xx)]
 
         metric_value = np.mean(rates)
 
@@ -145,6 +147,15 @@ def os_youdens_index(
     , labels=None
     , average = 'macro'
 ):
+    """
+    Youdens index is defined as: J = sensitivity + specificity -1. So, the colser to 1 the better.
+    :param y_true:
+    :param y_pred:
+    :param unknown_label:
+    :param labels:
+    :param average:
+    :return:
+    """
 
     tnr = get_metrics(
             y_true = y_true
@@ -221,6 +232,68 @@ def os_accuracy(
 
 
     return norm_acc
+
+# ---------------------------- #
+# -- metrics df
+# ---------------------------- #
+
+def metrics_df(
+        df
+        , observed_col = 'y'
+        , predicted_col = 'pred'
+        , split_col = None
+):
+    """
+    Return a dataframe containing the classification metrics for the splits
+    :param df:
+    :param observed_col:
+    :param predicted_col:
+    :param split_col:
+    :return:
+    """
+    
+    if split_col is not None:
+        df_dict = {key_: df[df[split_col] == key_] for key_ in df[split_col].unique()}
+    else:
+        df_dict = {'': df}
+
+    metrics_list = []
+    for key_, value_ in df_dict.items():
+        
+        aux_df = value_
+        
+        os_precision_ = os_precision(
+            aux_df[observed_col]
+            , aux_df[predicted_col]
+        )
+
+        os_recall_ = os_recall(
+            aux_df[observed_col]
+            , aux_df[predicted_col])
+
+        os_accuracy_ = os_accuracy(
+            aux_df[observed_col]
+            , aux_df[predicted_col])
+
+        os_youdens_index_ = os_youdens_index(
+            aux_df[observed_col]
+            , aux_df[predicted_col])
+
+        metrics_df = pd.DataFrame({
+            'os_precision': [os_precision_]
+            , 'os_recall': [os_recall_]
+            , 'os_accuracy': [os_accuracy_]
+            , 'os_youdens_index': [os_youdens_index_]
+            , split_col: key_
+        })
+
+        metrics_list.append(metrics_df)
+
+    metrics_df = pd.concat(metrics_list)
+    metrics_df = metrics_df.set_index('split').transpose()
+
+    return metrics_df
+
 
 # ------------------------------------------------------------ #
 # ------------------------------------------------------------ #

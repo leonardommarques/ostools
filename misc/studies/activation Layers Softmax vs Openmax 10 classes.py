@@ -43,39 +43,35 @@ import libmr
 # ------------------------------------------------------------ #
 # -- data
 # ------------------------------------------------------------ #
-# -- create example data
+
 np.random.seed(2956)
-n = 500
+total_da = pd.read_csv("/Volumes/hd_Data/Users/leo/Documents/Estudos/UTFPR/Orientacao/my weibull EVM/example_data/toy_example_10_classes.txt")
+total_da['y'] = total_da['group']
+total_da = total_da.drop(columns = ['group'])
 
-da1 = pd.DataFrame({
-    'x1': np.random.normal(loc=1, scale=2, size=n)
-    , 'x2': np.random.normal(loc=1, scale=2, size=n)
-    , 'y':'0'
-})
+# -- select known classes and relabel them -- #
+known_classes = [2, 0, 3, 6]
+known_classes = np.array(known_classes)
+known_classes.sort()
 
-da2 = pd.DataFrame({
-    'x1': np.random.normal(loc=8, scale=2, size=n)
-    , 'x2': np.random.normal(loc=8, scale=2, size=n)
-    , 'y':'1'
-})
+total_da['y'][~total_da['y'].isin(known_classes)] = -1
 
-db1 = pd.DataFrame({
-    'x1': np.random.normal(loc=90, scale=2, size=n)
-    , 'x2': np.random.normal(loc=70, scale=2, size=n)
-    , 'y':'-1'
-})
+# relabel classes according to order
+known_classes_dict = {known_classes[j]: j for j in range(len(known_classes))}
+known_classes_dict[-1] = -1
 
-total_da = pd.concat([da1, da2, db1])
-known_da = pd.concat([da1, da2])
-del da1, da2
+total_da['y'] = total_da['y'].apply(lambda xx: known_classes_dict[xx])
 
-(
-        gg.ggplot(
-    total_da
-    , gg.aes(x = 'x1', y = 'x2', fill = 'y')
-        ) +
-        gg.geom_point(size = 4)
-)
+total_da['y'] = total_da['y'].apply(str)
+known_da = total_da[total_da['y'] != '-1']
+
+# (
+#         gg.ggplot(
+#     total_da
+#     , gg.aes(x = 'x1', y = 'x2', fill = 'y')
+#         ) +
+#         gg.geom_point(size = 4)
+# )
 
 
 # ------------------- #
@@ -85,7 +81,7 @@ train_da, test_da = train_test_split(known_da, test_size=0.2, random_state=87635
 train_da, val_da = train_test_split(train_da, test_size=0.2, random_state=876357463)
 
 # -- add unknown data -- #
-test_da = pd.concat([test_da, db1])
+test_da = pd.concat([test_da, total_da.query('y == "-1"')])
 
 [a.shape[0] for a in [train_da, val_da, test_da]]
 
@@ -141,7 +137,7 @@ model.add(Dense(
 # activation vectors of the penultimate layer
 
 model.add(Dense(
-    units = X_train.shape[1]
+    units = Y_train.shape[1]
     , activation='linear'
                 ))
 
@@ -158,48 +154,26 @@ model.summary()
 # ------------------- #
 model.compile(
     optimizer=keras.optimizers.Adam(learning_rate=0.1)
-    , loss='binary_crossentropy'
+    , loss=keras.losses.CategoricalCrossentropy()
     , metrics=['accuracy']
 )
 
-# model.fit(X_train, Y_train, epochs=10)
-model.fit(X_train, Y_train, epochs=1)
+
+model.fit(X_train, Y_train, epochs=10)
+# model.fit(X_train, Y_train, epochs=1)
 # model.fit(X_train, Y_train, epochs=20)
 model.evaluate(X_train, Y_train)
 model.evaluate(X_val, Y_val)
-model.evaluate(X_test[Y_test['-1'] == 0], Y_test[Y_test['-1'] == 0][['0', '1']])
-
 
 # ------------------------------------------- #
 # -- Activations and predicitons
 # ------------------------------------------- #
 X_batch = X_train[:5].copy()
 
-# def get_activations(original_model, X_batch, layer = -2):
-#     """
-#     Get the values for the desired layer in the network.
-#     :param original_model:
-#     :param X_batch: Input values
-#     :param layer: The index of the desired layer
-#     :return: activations o the desired layer.
-#     """
-#     from keras.models import Model
-#
-#     intermediate_layer_model = Model(
-#         inputs=original_model.input
-#         , outputs=original_model.get_layer(index=layer).output)
-#
-#     activations = intermediate_layer_model.predict(X_batch)
-#
-#     return activations
-
-
 # activation vectors
 av = get_activations(model, x_batch=X_batch)
 # softmax on the activation vetors
 np.apply_along_axis(lambda x: [np.exp(i)/sum(np.exp(x)) for i in x], 1, av)
-# nn predictions (equal to softmax o the activation vector)
-model.predict(X_batch)
 
 # ------------------------------------------- #
 # ------------------------------------------- #
@@ -252,21 +226,13 @@ for i in range(preds.shape[1]):
 # (
 #         gg.ggplot(
 #     total_da
-#     , gg.aes(x = 'proba_0', y = 'proba_1', fill = 'y')
+#     , gg.aes(x ='av_0'
+#              , y='av_1'
+#              , fill='y')
 #         ) +
-#         gg.geom_point(size = 4)
+#         gg.geom_point(size = 4) +
+#         gg.facet_wrap('~split')
 # )
-
-(
-        gg.ggplot(
-    total_da
-    , gg.aes(x ='av_0'
-             , y='av_1'
-             , fill='y')
-        ) +
-        gg.geom_point(size = 4) +
-        gg.facet_wrap('~split')
-)
 
 # ------------------------------------------- #
 # ------------------------------------------- #
@@ -279,28 +245,10 @@ for i in range(preds.shape[1]):
 correctly_predicted_da = total_da[total_da['predicted_class'] == total_da['y']]
 mavs_da = correctly_predicted_da.query('split == "train"')[['av_0', 'av_1', 'y']].groupby('y').mean().reset_index()
 
-# (
-#         gg.ggplot(
-#     total_da.query('split == "train"')
-#     , gg.aes(x ='av_0'
-#              , y='av_1'
-#              , fill='y')
-#         ) +
-#         gg.geom_point(size = 4) +
-#         gg.geom_point(
-#             data = mavs_da
-#             , mapping=gg.aes(x ='av_0'
-#                      , y='av_1'
-#                      , fill='y')
-#             , size = 10
-#         )
-# )
-
 # -------------------------------------- #
 # -- distance to MAV
 # -------------------------------------- #
-import libmr
-
+# import libmr
 
 i = -1
 while i < len(mavs_da['y'])-1:
@@ -374,7 +322,11 @@ for col in aux_alphas.columns:
 # ------------------------------------------------ #
 
 # -- modified scores, that are the activation vectors
-classes = [j.replace('av_', '') for j in [i for i in total_da.columns if 'av_' in i]]
+
+classes = total_da['y'].unique()
+classes.sort()
+classes = list(classes[classes != '-1'])
+
 for class_ in classes:
     # class_ = classes[0]
     aux_modified_fc8_score = total_da[f'av_{class_}'] * (1 - total_da[f'alpha_weight_{class_}']*total_da[f'cdf_{class_}'])
@@ -386,7 +338,6 @@ aux_revised_unknown = pd.DataFrame()
 for class_ in classes:
     # class_ = classes[0]
     aux_revised_unknown[f'aux_revised_unknown_{class_}'] = total_da[f'av_{class_}'] - total_da[f'revised_av_{class_}']
-
 
 revised_cols = [i for i in total_da.columns if 'revised_av' in i]
 aux_revised_unknown
@@ -409,7 +360,7 @@ while i < len(calculated_openMax_df.columns)-1:
     i = i+1
 
     if i == len(calculated_openMax_df.columns)-1:
-        total_da[f'openMax_prob_class_-1'] = calculated_openMax_df.iloc[:,i]
+        total_da[f'openMax_prob_class_-1'] =  calculated_openMax_df.iloc[:,i]
     else:
         total_da[f'openMax_prob_class_{i}'] = calculated_openMax_df.iloc[:,i]
 
@@ -418,19 +369,6 @@ while i < len(calculated_openMax_df.columns)-1:
 openmax_cols = [i for i in total_da.columns if 'openMax_prob_class_' in i]
 total_da['openMax_pred_class'] = total_da[openmax_cols].apply(lambda xx: openmax_cols[np.argmax(xx)].replace('openMax_prob_class_', ''), axis = 1)
 
-# # -- unknown avs/fc8
-# for class_ in classes:
-#     # class_ = classes[0]
-#     total_da[f'openmax_fc8_unknown_{class_}'] = total_da[f'av_{class_}'] - total_da[f'modified_av_{class_}']
-
-total_da.head()
-total_da['cdf_0'].min()
-total_da['cdf_0'].max()
-
-total_da['cdf_1'].min()
-total_da['cdf_1'].max()
-
-total_da.columns
 
 # (
 #         gg.ggplot(
@@ -463,15 +401,11 @@ weibull_models.columns
 weibull_models.drop(columns=['weibull_model']).to_csv("/Volumes/hd_Data/Users/leo/Documents/temp/weibull_models.csv")
 total_da.to_csv("/Volumes/hd_Data/Users/leo/Documents/temp/total_da.csv")
 
-total_da.columns
 total_da['openMax_pred_class'].value_counts()
-
-total_da['dist_to_class_mean']
 
 # ---------------------------------- #
 # -- metrics -- #
 # ---------------------------------- #
-
 from ostools.metrics import get_metrics
 from ostools import metrics
 
@@ -484,3 +418,8 @@ quality_df = metrics.metrics_df(
 
 quality_df
 quality_df.to_csv("/Volumes/hd_Data/Users/leo/Documents/temp/quality_df.csv")
+
+"""
+CEMED8810297605
+
+"""
