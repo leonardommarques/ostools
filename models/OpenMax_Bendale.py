@@ -104,16 +104,25 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
         activation_vectors_correct_dict = {key_: activation_vectors_correct[y_correct == key_] for key_ in labels_}
         weibull_model_pars = {}
         for key_, value_ in activation_vectors_correct_dict.items():
+            # key_ = list(activation_vectors_correct_dict.keys())[0]
+            # value_ = list(activation_vectors_correct_dict.values())[0]
+
             aux_mav = np.apply_along_axis(np.mean, 0, value_)
 
             weibull_model_pars[key_] = {'mav': aux_mav}
+            del aux_mav
 
+        # pd.DataFrame({f"class_{key_}": value_['mav'] for key_, value_ in weibull_model_pars.items()})
         # ----------------------------- #
         # -- Distances -- #
         # ----------------------------- #
 
         for key_, value_ in weibull_model_pars.items():
-            aux_x = activation_vectors_correct_dict[key_]
+            # key_ = list(weibull_model_pars.keys())[3]
+            # value_ = list(weibull_model_pars.values())[3]
+
+            # aux_x = activation_vectors_correct_dict[key_]
+            aux_x = activation_vectors[y == key_]
             aux_mav = weibull_model_pars[key_]['mav']
 
             aux_distances = np.apply_along_axis(
@@ -131,6 +140,9 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
         # ----------------------------- #
 
         for key_, value_ in weibull_model_pars.items():
+            # key_ = list(weibull_model_pars.keys())[0]
+            # value_ = list(weibull_model_pars.values())[0]
+
             aux_distances = weibull_model_pars[key_]['distances'].copy()
             aux_distances = np.sort(aux_distances)
             shortest_distances = aux_distances[-tail_size: ]
@@ -197,7 +209,7 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
         # ----------------------------------- #
         # -- alphas
         # ----------------------------------- #
-        alphas = np.apply_along_axis(compute_alpha_weights, 1, cdfs)
+        alphas = np.apply_along_axis(compute_alpha_weights, 1, activation_vectors)
         alphas = alphas.reshape(alphas.shape[0], alphas.shape[2])
 
         # ----------------------------------- #
@@ -205,8 +217,6 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
         # ----------------------------------- #
         revised_known = activation_vectors * (1- alphas * cdfs)
         revised_unknown = activation_vectors - revised_known
-
-        activation_vectors * (1 - alphas * cdfs)
 
         calculated_openMax = []
         i = -1
@@ -220,7 +230,7 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
             calculated_openMax.append(aux_calculated_openMax)
 
         calculated_openMax_df = pd.DataFrame(np.array(calculated_openMax))
-        calculated_openMax_df.columns = list(labels_) + [-1]
+        calculated_openMax_df.columns = list(self.labels) + [-1]
         calculated_openMax_df.columns = [str(i) for i in calculated_openMax_df.columns]
 
         return calculated_openMax_df
@@ -229,5 +239,5 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
 # --
 # ---------------------------------------- #
 # data and model: /Volumes/hd_Data/Users/leo/Documents/Estudos/UTFPR/Orientacao/my_packages/ostools/misc/studies/activation Layers Softmax vs Openmax.py
-model
+
 
