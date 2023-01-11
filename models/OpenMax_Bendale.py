@@ -239,5 +239,3 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
 # --
 # ---------------------------------------- #
 # data and model: /Volumes/hd_Data/Users/leo/Documents/Estudos/UTFPR/Orientacao/my_packages/ostools/misc/studies/activation Layers Softmax vs Openmax.py
-
-
