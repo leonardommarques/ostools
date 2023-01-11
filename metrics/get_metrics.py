@@ -16,6 +16,7 @@ def get_metrics(
     , metric = 'precision'):
     """
     Get true negative rate, precision or recall with macro or micro averaging.
+    https://arxiv.org/pdf/1811.08581.pdf
     :param y_true: Correct (observed) values
     :param y_pred: Predicted values
     :param unknown_label: label representing unknown class
@@ -242,6 +243,7 @@ def metrics_df(
         , observed_col = 'y'
         , predicted_col = 'pred'
         , split_col = None
+        , unknown_label = -1
 ):
     """
     Return a dataframe containing the classification metrics for the splits
@@ -265,19 +267,26 @@ def metrics_df(
         os_precision_ = os_precision(
             aux_df[observed_col]
             , aux_df[predicted_col]
+            , unknown_label = unknown_label
         )
 
         os_recall_ = os_recall(
             aux_df[observed_col]
-            , aux_df[predicted_col])
+            , aux_df[predicted_col]
+            , unknown_label = unknown_label
+        )
 
         os_accuracy_ = os_accuracy(
             aux_df[observed_col]
-            , aux_df[predicted_col])
+            , aux_df[predicted_col]
+            , unknown_label=unknown_label
+        )
 
         os_youdens_index_ = os_youdens_index(
             aux_df[observed_col]
-            , aux_df[predicted_col])
+            , aux_df[predicted_col]
+            , unknown_label=unknown_label
+        )
 
         metrics_df = pd.DataFrame({
             'os_precision': [os_precision_]

@@ -27,6 +27,8 @@ def get_os_conf_mat_terms(
 
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
+    # force unknown_label top have the same type as y_pred
+    unknown_label = type(y_pred[0])(unknown_label)
 
     # -- get possible labels forcing "unknown" class to be the first -- #
     if labels is None:
@@ -62,9 +64,9 @@ def get_os_conf_mat_terms(
         i_fp = np.sum(conf_mat[:, i]) - conf_mat[i, i]
         fps.append(i_fp)
 
-        # sum of true negatives. true negative does not consider unknown
+        # sum of true negatives. true negative does not consider unknown unknown classes (UUCs)
         conf_mat_2 = conf_mat.copy()
-        conf_mat_2[i, ] = 0
+        conf_mat_2[i, :] = 0
         conf_mat_2[: ,i] = 0
         conf_mat_2[0,] = 0
         conf_mat_2[:, 0] = 0
