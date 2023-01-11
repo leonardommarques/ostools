@@ -235,6 +235,21 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
 
         return calculated_openMax_df
 
+    def predict(
+            self
+            , X):
+        """
+        Predicts the class
+        :param X:
+        :return:
+        """
+        labels_ = om_bend.labels
+        labels_ = list(labels_) + [-1]
+        predicted_probas = self.predict_proba(X)
+        predicted_class = predicted_probas.apply(lambda xx: labels_[np.argmax(xx)], 1)
+        return predicted_class
+
+
 # ---------------------------------------- #
 # --
 # ---------------------------------------- #

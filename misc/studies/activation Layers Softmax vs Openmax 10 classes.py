@@ -115,6 +115,11 @@ X_train = scaler.transform(X_train)
 X_val = scaler.transform(X_val)
 X_test = scaler.transform(X_test)
 
+feature_cols = [i for i in train_da.columns if i not in ['y', 'split']]
+train_da[feature_cols] = X_train
+val_da[feature_cols] = X_val
+test_da[feature_cols] = X_test
+
 # ------------------------------------------------------------ #
 # -- model
 # ------------------------------------------------------------ #
@@ -169,9 +174,11 @@ model.evaluate(X_val, Y_val)
 # -- Activations and predicitons
 # ------------------------------------------- #
 X_batch = X_train[:5].copy()
+X_batch = X_train
 
 # activation vectors
 av = get_activations(model, x_batch=X_batch)
+av
 # softmax on the activation vetors
 np.apply_along_axis(lambda x: [np.exp(i)/sum(np.exp(x)) for i in x], 1, av)
 
@@ -197,22 +204,23 @@ total_preds['predicted_class'] = total_preds[total_preds.columns].apply(lambda x
 total_preds['predicted_class'] = classes_labels[total_preds['predicted_class']]
 total_da['predicted_class'] = total_preds['predicted_class']
 
+
 avs = get_activations(model, x_batch=total_da[['x1', 'x2']].values)
 avs_df = pd.DataFrame(avs)
 avs_df.columns = [f"activation_vector_{i}" for i in range(len(avs_df.columns))]
 
-math_da = pd.concat(
-    [
-    total_da.copy().reset_index(drop=True)
-    , avs_df.reset_index(drop=True)
-    ]
-    , axis = 1
-)
-math_da = pd.concat([math_da, total_preds], axis=1)
-math_da.head(3)
-
-math_da.to_csv("/Users/leonardomarques/Downloads/total_da_2.csv", index=False)
-# Honestly I don't know why I made this dataframe. I think I need professional help and vacations.
+# math_da = pd.concat(
+#     [
+#     total_da.copy().reset_index(drop=True)
+#     , avs_df.reset_index(drop=True)
+#     ]
+#     , axis = 1
+# )
+# math_da = pd.concat([math_da, total_preds], axis=1)
+# math_da.head(3)
+#
+# math_da.to_csv("/Users/leonardomarques/Downloads/total_da_2.csv", index=False)
+# # Honestly I don't know why I made this dataframe. I think I need professional help and vacations.
 
 # - predictions
 for i in range(preds.shape[1]):
@@ -222,6 +230,7 @@ for i in range(preds.shape[1]):
 for i in range(preds.shape[1]):
     total_da['av_' + str(i)] = avs[:, i]
 
+avs
 
 # (
 #         gg.ggplot(
@@ -242,8 +251,11 @@ for i in range(preds.shape[1]):
 
 # -- get mean activation vectors
 ## PAPER page 5: The model µi is computed using the images associated with category i, images that were classified correctly (top-1) during training process.
-correctly_predicted_da = total_da[total_da['predicted_class'] == total_da['y']]
-mavs_da = correctly_predicted_da.query('split == "train"')[['av_0', 'av_1', 'y']].groupby('y').mean().reset_index()
+correctly_predicted_da = total_da[total_da['predicted_class'] == total_da['y']].query('split == "train"').copy()
+av_cols = [i for i in correctly_predicted_da.columns if 'av_' in i]
+
+# mavs_da = correctly_predicted_da.query('split == "train"')[av_cols + ['y']].groupby('y').mean().reset_index()
+mavs_da = correctly_predicted_da[av_cols + ['y']].groupby('y').apply(lambda xx: np.mean(xx)).drop(columns = ['y']).reset_index()
 
 # -------------------------------------- #
 # -- distance to MAV
@@ -254,22 +266,35 @@ i = -1
 while i < len(mavs_da['y'])-1:
     i = i+1
     i_class = mavs_da['y'][i]
+    i_class = str(int(i_class))
 
     # aux_train_da = total_da.query('y == @i_class')
     i_mav = mavs_da.query('y == @i_class').drop(columns = ['y'])
 
-    dist_to_ith_mean = total_da[['av_0', 'av_1']].apply(
+    dist_to_ith_mean = total_da[av_cols].apply(
         lambda xx: scipy.spatial.distance.euclidean(
             xx
-            , i_mav[['av_0', 'av_1']].values
+            , i_mav[av_cols].values
         )
         , axis = 1
     )
 
-    total_da['dist_to_mean_'+i_class] = dist_to_ith_mean
+    total_da['dist_to_mean_'+ i_class] = dist_to_ith_mean
 
 
-total_da['dist_to_class_mean'] = total_da[[aux for aux in total_da.columns if 'dist_to_mean_' in aux]].apply(min, axis=1)
+# -- add distances to mean -- #
+dist_to_means_col = [i for i in total_da.columns if 'dist_to_mean_' in i]
+total_da['y'].unique()
+
+total_da['dist_to_class_mean'] = np.apply_along_axis(
+    np.sum
+    , 0
+    , np.array([total_da[f'dist_to_mean_{i}']*(total_da['y'] == i).astype(int) for i in classes_labels])
+)
+
+# total_da = total_da.drop(columns = ['dist_to_class_mean'])
+# total_da['dist_to_class_mean'] = total_da[[aux for aux in total_da.columns if 'dist_to_mean_' in aux]].apply(min, axis=1)
+total_da['dist_to_class_mean']
 
 # ------------------------------------------------ #
 # ------------------------------------------------ #
@@ -277,6 +302,7 @@ total_da['dist_to_class_mean'] = total_da[[aux for aux in total_da.columns if 'd
 # on the high distances
 # ------------------------------------------------ #
 # ------------------------------------------------ #
+idx_total_da_train = total_da['split'] == "train"
 weibull_models = mavs_da.copy()
 weibull_models['weibull_model'] = 'dsdsd'
 i = -1
@@ -285,7 +311,9 @@ while i < len(mavs_da['y'])-1:
     i_class = mavs_da['y'][i]
 
     # n highest distances from observations of i-th class and ith mean activation vector
-    ith_distances = total_da[total_da['y'] == i_class]['dist_to_class_mean'].values
+    aux_train = total_da[idx_total_da_train]
+    # aux_train['y'].value_counts()
+    ith_distances = aux_train[aux_train['y'] == i_class]['dist_to_class_mean'].values
     ith_distances.sort()
     ith_distances = ith_distances[-tail_size:]
 
@@ -300,19 +328,18 @@ while i < len(mavs_da['y'])-1:
 
 weibull_models_dict = weibull_models.set_index(['y']).to_dict(orient='index')
 
-weibull_models_dict
-total_da
-
 # -- CDFs on the distances -- #
 for ith in weibull_models_dict.keys():
+    # ith = list(weibull_models_dict.keys())[0
     total_da['cdf_' + ith] = weibull_models_dict[ith]['weibull_model'].predict(X=total_da['dist_to_mean_'+ith])
 
 # -- alphas weights -- #
-aux_alphas = total_da[[i for i in total_da.columns if 'av_' in i]].apply(compute_alpha_weights, axis = 1)
+aux_alphas = total_da[[i for i in total_da.columns if 'av_' in i[:3]]].apply(compute_alpha_weights, axis = 1)
 aux_alphas = np.concatenate(aux_alphas)
 aux_alphas = pd.DataFrame(aux_alphas)
 for col in aux_alphas.columns:
     total_da['alpha_weight_' + str(col)] = aux_alphas[col]
+
 
 # ------------------------------------------------ #
 # ------------------------------------------------ #
@@ -406,20 +433,22 @@ total_da['openMax_pred_class'].value_counts()
 # ---------------------------------- #
 # -- metrics -- #
 # ---------------------------------- #
+# del metrics, get_metrics
 from ostools.metrics import get_metrics
 from ostools import metrics
 
 quality_df = metrics.metrics_df(
     total_da
-    , observed_col = 'y'
-    , predicted_col = 'openMax_pred_class'
-    , split_col = 'split'
+    , observed_col='y'
+    , predicted_col='openMax_pred_class'
+    , split_col='split'
+    , unknown_label=-1
 )
 
 quality_df
+total_da['y']
+total_da['openMax_pred_class']
+
+
+quality_df
 quality_df.to_csv("/Volumes/hd_Data/Users/leo/Documents/temp/quality_df.csv")
-
-"""
-CEMED8810297605
-
-"""
