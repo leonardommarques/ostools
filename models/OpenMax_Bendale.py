@@ -6,28 +6,22 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, ClassifierMixin
 from scipy import stats
-import scipy
+from scipy.spatial.distance import euclidean
 
-sys.path.append('/Volumes/hd_Data/Users/leo/Documents/Estudos/UTFPR/Orientacao/my_packages/')
+from ..functions import compute_alpha_weights, get_activations
+from ..functions import WeibullScipy
+from OSDN.utils.compute_openmax import computeOpenMaxProbability
 
-from ostools.models.EVM import fit_weibull, predict_weibul
-from ostools.functions import compute_alpha_weights, get_activations
-
-# ---------------------------------------------------------------------------------- #
-# -- auxiliary functions
-# ---------------------------------------------------------------------------------- #
-
-
-# ---------------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------------- #
 # the class itself
+# ---------------------------------------------------------------------------------- #
 
-class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
+class OpenMaxBendale(BaseEstimator, ClassifierMixin):
     def __init__(self
                  , trained_model
                  , tail_size=10
                  , classes_to_revise=-1
-                 , distance_function=scipy.spatial.distance.euclidean
+                 , distance_function=euclidean
                  ):
         """
         OpenMax model presented in Towards Open Set Deep Network (https://arxiv.org/pdf/1511.06233.pdf)
@@ -70,16 +64,21 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
         tail_size = self.tail_size
         distance_function = self.distance_function
 
+        labels = list(np.unique(y))
+        self.labels = labels
+
         # ----------------------------- #
         # -- sanitization
         # ----------------------------- #
         if predictions is None:
             predictions = trained_model.predict(X)
-            predictions = np.apply_along_axis(np.argmax, 1, predictions)
+            predictions = np.apply_along_axis(lambda xx: self.labels[np.argmax(xx)], 1, predictions)
+
 
         # -- enforce y to be one column -- #
-        if len(y.shape) > 1:
-            y = np.apply_along_axis(np.argmax, 1, y)
+        # if y.shape[1] > 1:
+        # # if len(y.shape[1]) > 1:
+        #     y = np.apply_along_axis(np.argmax, 1, y)
 
         # ----------------------------- #
         # -- Activation vectors
@@ -95,7 +94,7 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
         # ---------------------------------------------------------- #
         # -- Mean activation vectors
         # ---------------------------------------------------------- #
-        # -- get correct predictions and theis activations -- #
+        # -- get correct predictions and their activations -- #
         idx_correct_predictions = predictions == y
         activation_vectors_correct = activation_vectors[idx_correct_predictions].copy()
         y_correct = y[idx_correct_predictions].copy()
@@ -118,8 +117,8 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
         # ----------------------------- #
 
         for key_, value_ in weibull_model_pars.items():
-            # key_ = list(weibull_model_pars.keys())[3]
-            # value_ = list(weibull_model_pars.values())[3]
+            # key_ = list(weibull_model_pars.keys())[0]
+            # value_ = list(weibull_model_pars.values())[0]
 
             # aux_x = activation_vectors_correct_dict[key_]
             aux_x = activation_vectors[y == key_]
@@ -159,7 +158,10 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
 
     def predict_proba(
             self
-            , X):
+            , X
+            , return_cdf = False
+            , return_revised = False
+    ):
         """
         A dataFrame with the predictions
         :param X: Features to predict
@@ -205,6 +207,8 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
             del aux_cdf, aux_distances, aux_model, aux_mav
 
         cdfs = pd.DataFrame(cdfs)
+        if return_cdf:
+            return  cdfs
 
         # ----------------------------------- #
         # -- alphas
@@ -217,6 +221,8 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
         # ----------------------------------- #
         revised_known = activation_vectors * (1- alphas * cdfs)
         revised_unknown = activation_vectors - revised_known
+        if return_revised:
+            return revised_known
 
         calculated_openMax = []
         i = -1
@@ -237,17 +243,21 @@ class OpenMax_Bendale(BaseEstimator, ClassifierMixin):
 
     def predict(
             self
-            , X):
+            , X
+            , unkown_label = '-1'
+    ):
         """
         Predicts the class
         :param X:
         :return:
         """
-        labels_ = om_bend.labels
-        labels_ = list(labels_) + [-1]
+        unkown_label = type(self.labels[0])(unkown_label)
+        self.labels[0]
+        labels_ = self.labels
+        labels_ = list(labels_) + [unkown_label]
         predicted_probas = self.predict_proba(X)
         predicted_class = predicted_probas.apply(lambda xx: labels_[np.argmax(xx)], 1)
-        return predicted_class
+        return predicted_class.values
 
 
 # ---------------------------------------- #

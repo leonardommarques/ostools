@@ -33,7 +33,7 @@ class SKLEARN_EVM(BaseEstimator, ClassifierMixin):
         :param tail_size: number of observations to use to fit the weibull distribution
         :param n_obs_to_fuse: number of observations to use in the prediction by averaging out their individual predictions
         :param confidence_threshold: Minimum probability of belonging to the acceptance area of the observation
-        :param cover_threshold: How much of the original model should not be reduces. The lower `cover_threshold` the fewer observations (with it's weibuls) will remain on the EVM.
+        :param cover_threshold: How much of the original model should not be reduced. The lower `cover_threshold` the fewer observations (with it's weibuls) will remain on the EVM.
         :param kwargs:
         """
 
@@ -106,6 +106,7 @@ class SKLEARN_EVM(BaseEstimator, ClassifierMixin):
                 # assert that n_obs_to_fuse is not bigger than available vectors.
                 # if (n_obs_to_fuse is None) or (n_obs_to_fuse > class_probs.shape[0]):
                 #     n_obs_to_fuse = class_probs.shape[0]
+
                 # get top n_obs_to_fuse
                 idx = (-class_probs).argsort()[:n_obs_to_fuse]
                 class_preds.append(np.mean(class_probs[idx]))

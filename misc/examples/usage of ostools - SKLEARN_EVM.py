@@ -74,7 +74,6 @@ sk_evm = SKLEARN_EVM(
     , cover_threshold=100 # set to 100 so that it uses all points to create weibull models (Extreme vectors)
     , distance_function=scipy.spatial.distance.euclidean
     , distance_multiplier=1  # I still do not knwo why we should rescale the distances. Easier to compute??
-
 )
 
 X = df[features].values

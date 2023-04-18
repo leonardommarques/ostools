@@ -243,7 +243,7 @@ def metrics_df(
         , observed_col = 'y'
         , predicted_col = 'pred'
         , split_col = None
-        , unknown_label = -1
+        , unknown_label = '-1'
 ):
     """
     Return a dataframe containing the classification metrics for the splits
@@ -253,7 +253,8 @@ def metrics_df(
     :param split_col:
     :return:
     """
-    
+
+
     if split_col is not None:
         df_dict = {key_: df[df[split_col] == key_] for key_ in df[split_col].unique()}
     else:
@@ -261,9 +262,11 @@ def metrics_df(
 
     metrics_list = []
     for key_, value_ in df_dict.items():
-        
+
         aux_df = value_
-        
+        # Force unknown_label to have the same class as observations
+        unknown_label = type(list(aux_df[observed_col])[0])(unknown_label)
+
         os_precision_ = os_precision(
             aux_df[observed_col]
             , aux_df[predicted_col]

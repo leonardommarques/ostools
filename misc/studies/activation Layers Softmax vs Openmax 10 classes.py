@@ -55,12 +55,14 @@ known_classes = np.array(known_classes)
 known_classes.sort()
 
 total_da['y'][~total_da['y'].isin(known_classes)] = -1
+np.sort(total_da['y'].unique())
 
 # relabel classes according to order
 known_classes_dict = {known_classes[j]: j for j in range(len(known_classes))}
 known_classes_dict[-1] = -1
 
 total_da['y'] = total_da['y'].apply(lambda xx: known_classes_dict[xx])
+total_da['y'].unique()
 
 total_da['y'] = total_da['y'].apply(str)
 known_da = total_da[total_da['y'] != '-1']
@@ -163,7 +165,7 @@ model.compile(
     , metrics=['accuracy']
 )
 
-
+dir(model)
 model.fit(X_train, Y_train, epochs=10)
 # model.fit(X_train, Y_train, epochs=1)
 # model.fit(X_train, Y_train, epochs=20)
@@ -382,6 +384,7 @@ while i < total_da.shape[0]-1:
 
 calculated_openMax_df = pd.DataFrame(np.array(calculated_openMax))
 
+# classes
 i = -1
 while i < len(calculated_openMax_df.columns)-1:
     i = i+1
@@ -389,13 +392,22 @@ while i < len(calculated_openMax_df.columns)-1:
     if i == len(calculated_openMax_df.columns)-1:
         total_da[f'openMax_prob_class_-1'] =  calculated_openMax_df.iloc[:,i]
     else:
-        total_da[f'openMax_prob_class_{i}'] = calculated_openMax_df.iloc[:,i]
+        total_da[f'openMax_prob_class_{classes[i]}'] = calculated_openMax_df.iloc[:,i]
 
 
 # -- add prediction -- #
 openmax_cols = [i for i in total_da.columns if 'openMax_prob_class_' in i]
-total_da['openMax_pred_class'] = total_da[openmax_cols].apply(lambda xx: openmax_cols[np.argmax(xx)].replace('openMax_prob_class_', ''), axis = 1)
 
+all_classes = list(known_classes) + [-1]
+total_da['openMax_pred_class'] = total_da[openmax_cols].apply(lambda xx: all_classes[np.argmax(xx)], axis = 1)
+
+# -- some sanitization -- #
+total_da['openMax_pred_class'] = total_da['openMax_pred_class'].astype(str)
+known_classes_dict_rev = {value_:key_ for key_, value_ in known_classes_dict.items()}
+total_da['y'] = total_da['y'].apply(lambda xx: known_classes_dict_rev[int(xx)])
+
+total_da['y'].unique()
+total_da['openMax_pred_class'].unique()
 
 # (
 #         gg.ggplot(
@@ -437,18 +449,17 @@ total_da['openMax_pred_class'].value_counts()
 from ostools.metrics import get_metrics
 from ostools import metrics
 
+total_da['openMax_pred_class'].unique()
+total_da['y'] = total_da['y'].astype(str)
 quality_df = metrics.metrics_df(
-    total_da
+    df = total_da
     , observed_col='y'
     , predicted_col='openMax_pred_class'
     , split_col='split'
     , unknown_label=-1
 )
 
-quality_df
-total_da['y']
-total_da['openMax_pred_class']
-
 
 quality_df
+total_da_old = total_da.copy()
 quality_df.to_csv("/Volumes/hd_Data/Users/leo/Documents/temp/quality_df.csv")
