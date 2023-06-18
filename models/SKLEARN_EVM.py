@@ -1,6 +1,7 @@
 # ---------------------------------------------------------------------- #
 # -- Class SKLEARN_EVM
-# implements ym version of EVM.MultipleEVM
+# implements my version of EVM.MultipleEVM
+# https://pypi.org/project/EVM/
 # ---------------------------------------------------------------------- #
 
 from EVM import MultipleEVM
@@ -67,11 +68,13 @@ class SKLEARN_EVM(BaseEstimator, ClassifierMixin):
         # ------------------------------------------------------------------------ #
         # fit multi EVM
         # ------------------------------------------------------------------------ #
-
+        cover_threshold_ = self.cover_threshold
+        if cover_threshold_ < X.shape[0]:
+            cover_threshold_ = X.shape[0]
         multi_EVM = MultipleEVM(
             tailsize=self.tail_size
             # , cover_threshold=100 # set to 100 so that it uses all points to create weibull models (Extreme vectors)
-            , cover_threshold=self.cover_threshold
+            , cover_threshold=cover_threshold_
             # set to 100 so that it uses all points to create weibull models (Extreme vectors)
             , distance_function=self.distance_function
             , distance_multiplier=self.margin_scale
