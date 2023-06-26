@@ -55,6 +55,7 @@ def get_metrics(
     # -------------------------------------- #
     # get metric average
     # -------------------------------------- #
+    # A, B
     if average == 'micro':
         metric_value = sum(A)/(sum(A) + sum(B))
     elif average == 'macro':
@@ -192,12 +193,13 @@ def os_accuracy(
     # ---------------------------------- #
     # -- AKS accuracy for the knowns -- #
     # ---------------------------------- #
-    idx_knowns = y_true != unknown_label
-    y_true_known = y_true[idx_knowns]
-    y_pred_known = y_pred[idx_knowns]
+    idx_knowns = np.array(y_true) != unknown_label
+    y_true_known = np.array(y_true)[idx_knowns]
+    y_pred_known = np.array(y_pred)[idx_knowns]
 
-    y_true_unknown = y_true[~idx_knowns]
-    y_pred_unknown = y_pred[~idx_knowns]
+    y_true_unknown = np.array(y_true)[~idx_knowns]
+    y_pred_unknown = np.array(y_pred)[~idx_knowns]
+
 
     AKS = sum(y_true_known==y_pred_known) / len(y_true_known)
 
