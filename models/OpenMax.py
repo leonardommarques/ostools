@@ -39,8 +39,7 @@ def get_activations(original_model, X_batch, layer = -2):
 # the class itself
 
 
-
-class OpenMax(BaseEstimator, ClassifierMixin):
+class OpenMaxLayer(BaseEstimator, ClassifierMixin):
     def __init__(self
                  , trained_model
                  , tail_size = 10

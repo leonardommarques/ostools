@@ -3,12 +3,14 @@
 # -------------------------------------- #
 
 import numpy as np
+import pandas as pd
+
 from .get_os_conf_mat_terms import get_os_conf_mat_terms
 
 def get_metrics(
     y_true
     , y_pred
-    , unknown_label = -1
+    , unknown_label
     , labels=None
     , average = 'macro'
     , metric = 'precision'):
@@ -61,6 +63,12 @@ def get_metrics(
     elif average == 'macro':
         rates = [a/(a+b) for a, b in zip(A, B)]
         # rates = [(a, b) for a, b in zip(A, B)]
+        rates == np.nan
+        pd.DataFrame(
+            dict(a = A, b = B, ab = rates)
+        )
+        np.any(np.array(rates) == np.nan)
+        type(rates)
 
         metric_value = np.mean(rates)
 
@@ -79,7 +87,7 @@ def get_metrics(
 def os_precision(
     y_true
     , y_pred
-    , unknown_label = -1
+    , unknown_label
     , labels=None
     , average = 'macro'
 ):
@@ -100,7 +108,7 @@ def os_precision(
 def os_recall(
     y_true
     , y_pred
-    , unknown_label = -1
+    , unknown_label
     , labels=None
     , average = 'macro'
 ):
@@ -120,7 +128,7 @@ def os_recall(
 def os_true_negative_rate(
     y_true
     , y_pred
-    , unknown_label = -1
+    , unknown_label
     , labels=None
     , average = 'macro'
 ):
@@ -142,7 +150,7 @@ def os_true_negative_rate(
 def os_youdens_index(
     y_true
     , y_pred
-    , unknown_label = -1
+    , unknown_label
     , labels=None
     , average = 'macro'
 ):
@@ -173,7 +181,7 @@ def os_youdens_index(
 def os_accuracy(
         y_true
         , y_pred
-        , unknown_label = -1
+        , unknown_label
         , alpha = 0.5
 ):
     """

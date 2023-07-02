@@ -31,9 +31,9 @@ import pandas as pd
 # import seaborn as sns
 # import scipy.stats as stats
 from scipy.stats import weibull_min
-# from scipy.special import softmax
-# import scipy.spatial.distance as distance
-# import scipy.optimize as optimize
+from scipy.special import softmax
+import scipy.spatial.distance as distance
+import scipy.optimize as optimize
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -58,6 +58,12 @@ def calc_distances(activations, mav):
 # ---------------------------------------- #
 # --
 # ---------------------------------------- #
+# 2
+# 300620238397449
+# 5
+# RS 2.02
+# (4/30)*100
+
 
 def fit_weibull(distances_all, n_classes):
     """
@@ -70,8 +76,6 @@ def fit_weibull(distances_all, n_classes):
 
     return weibull_models
 
-
-
 # ---------------------------------------- #
 # --
 # ---------------------------------------- #
@@ -79,10 +83,10 @@ def fit_weibull(distances_all, n_classes):
 def predict_openmax(x, mav_list, weibull_models, alpha = None):
     """
 
-    :param x: Activation vector
-    :param mav_list:
+    :param x: Activation vector.
+    :param mav_list: Mean activation vector.
     :param weibull_models:
-    :param alpha:
+    :param alpha: Number of top classes to revise
     :return:
     """
     n_classes = x.shape[1]
@@ -122,7 +126,7 @@ def predict_openmax(x, mav_list, weibull_models, alpha = None):
 # ---------------------------------------- #
 
 
-class OpenMax():
+class OpenMaxLayer():
     def __int__(
             self
             , ratio_top_distances = 0.1 # ratio of top distances to use for weibull models.
@@ -189,8 +193,8 @@ class OpenMax():
 
         predictions_ = predict_openmax(
             x=X_avs
-            , mav_list = list(mavs_dict.values())
-            , weibull_models = list(weibull_models.values())
+            , mav_list = list(self.mavs_dict.values())
+            , weibull_models = list(self.weibull_models.values())
             , alpha=alpha
         )
 
